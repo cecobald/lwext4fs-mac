@@ -1,12 +1,21 @@
-# binaries / build artifacts
+# build artifacts
 *.o
 lwext4fs-mac
+
+# fetched upstream
+vendor/
+
 # test disk images (big)
 *.ext4
 *.img
+
 # mount points
 mnt*/
 vmnt/
 p3mnt/
+
+# release artifacts
+dist/
+
 # macOS
 .DS_Store

@@ -1,15 +1,21 @@
-# Makefile - lwext4fs-mac (macFUSE FUSE2 front-end over lwext4)
+# Makefile — lwext4fs-mac : an ext4 read/write filesystem for macOS
+# Front-end: macFUSE (FUSE 2 high-level API) over the lwext4 library.
 #
-# Feasibility scaffold. Build:
-#     make
-# Produces ./lwext4fs-mac
+# Quick build (fetches + patches + builds lwext4, then this):
+#     ./build.sh
+# With an already-built lwext4 tree:
+#     make LWEXT4=/path/to/lwext4
+#
+# Install the binary:
+#     sudo make install            # -> /usr/local/bin/lwext4fs-mac
 
-LWE      := /Users/ceco/lwext4-spike/lwext4
-LWE_INC  := -I$(LWE)/include -I$(LWE)/build_generic/include -I$(LWE)/blockdev/linux
-LWE_LIBS := $(LWE)/build_generic/src/liblwext4.a \
-            $(LWE)/build_generic/blockdev/libblockdev.a
+LWEXT4   ?= vendor/lwext4
+PKGCONF  ?= pkg-config
 
-PKGCONF  := pkg-config
+LWE_INC  := -I$(LWEXT4)/include -I$(LWEXT4)/build_generic/include -I$(LWEXT4)/blockdev/linux
+LWE_LIBS := $(LWEXT4)/build_generic/src/liblwext4.a \
+            $(LWEXT4)/build_generic/blockdev/libblockdev.a
+
 FUSE_CFLAGS := $(shell $(PKGCONF) --cflags fuse)
 FUSE_LIBS   := $(shell $(PKGCONF) --libs fuse)
 
@@ -18,10 +24,11 @@ CFLAGS   ?= -O2 -g
 CFLAGS   += -Wall -Wextra $(LWE_INC) $(FUSE_CFLAGS)
 LDFLAGS  += $(FUSE_LIBS) -lpthread
 
-OBJS := src/main.o src/ops.o
-BIN  := lwext4fs-mac
+PREFIX   ?= /usr/local
+BIN      := lwext4fs-mac
+OBJS     := src/main.o src/ops.o
 
-.PHONY: all clean
+.PHONY: all clean install uninstall
 all: $(BIN)
 
 src/%.o: src/%.c src/ops.h
@@ -29,6 +36,13 @@ src/%.o: src/%.c src/ops.h
 
 $(BIN): $(OBJS)
 	$(CC) $(OBJS) $(LWE_LIBS) $(LDFLAGS) -o $@
+
+install: $(BIN)
+	install -d "$(DESTDIR)$(PREFIX)/bin"
+	install -m 0755 $(BIN) "$(DESTDIR)$(PREFIX)/bin/$(BIN)"
+
+uninstall:
+	rm -f "$(DESTDIR)$(PREFIX)/bin/$(BIN)"
 
 clean:
 	rm -f $(OBJS) $(BIN)
