@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.ceco.lwext4fs.fedora</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/bin/lwext4fs-automount</string>
+		<string>/dev/disk0s3</string>
+		<string>/Volumes/Fedora</string>
+	</array>
+
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+
+	<!-- FUSE servers must not be app-napped; Interactive keeps it running. -->
+	<key>ProcessType</key>
+	<string>Interactive</string>
+
+	<key>StandardOutPath</key>
+	<string>/var/log/lwext4fs-fedora.log</string>
+	<key>StandardErrorPath</key>
+	<string>/var/log/lwext4fs-fedora.log</string>
+</dict>
+</plist>

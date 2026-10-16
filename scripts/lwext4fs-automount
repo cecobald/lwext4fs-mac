@@ -1,0 +1,43 @@
+#!/bin/bash
+# lwext4fs-automount — boot-time READ-WRITE mount of an ext4 device, run in the
+# foreground so launchd supervises it (see LaunchDaemons/*.plist).
+#
+# Usage: lwext4fs-automount [device] [mountpoint]
+#
+# Notes:
+#  - waits (up to ~30 s) for the device node to appear,
+#  - if something else has already mounted the device (e.g. ExtendFS / Disk
+#    Arbitration), it is unmounted first so we can take over,
+#  - writes are enabled; this is only meant for devices whose owning OS is
+#    shut down.
+set -u
+
+DEV="${1:-/dev/disk0s3}"
+MP="${2:-/Volumes/Fedora}"
+BIN="/usr/local/bin/lwext4fs-mac"
+[ -x "$BIN" ] || BIN="$(cd "$(dirname "$0")" && pwd)/lwext4fs-mac"
+
+# Wait for the device node.
+for _ in $(seq 1 30); do
+	[ -e "$DEV" ] && break
+	sleep 1
+done
+if [ ! -e "$DEV" ]; then
+	echo "lwext4fs-automount: device $DEV not found; giving up"
+	exit 1
+fi
+
+# Take over from a read-only auto-mount (ExtendFS) if present.
+if mount | grep -q "^$DEV "; then
+	cur=$(mount | awk -v d="$DEV" '$1==d {print $3; exit}')
+	if [ -n "$cur" ]; then
+		echo "lwext4fs-automount: unmounting existing mount at $cur"
+		umount -f "$cur" 2>/dev/null
+		sleep 1
+	fi
+fi
+
+mkdir -p "$MP" 2>/dev/null || true
+
+echo "lwext4fs-automount: mounting $DEV -> $MP (READ-WRITE)"
+exec "$BIN" "$DEV" "$MP" -f -o rw -o allow_other
