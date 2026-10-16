@@ -1,0 +1,31 @@
+#!/bin/bash
+# lwext4fs-umount — unmount an lwext4fs-mac (macFUSE) mount cleanly.
+#
+# Usage: sudo lwext4fs-umount [mountpoint]      (default: /Volumes/Fedora)
+#
+# Real-device macFUSE mounts are frequently held "busy" by Spotlight (mds),
+# which makes a plain umount fail with EBUSY. This retries with a forced
+# unmount, which is safe for a filesystem that is not being written to at the
+# moment. Run with sudo when the mount was created by root.
+set -u
+
+MP="${1:-/Volumes/Fedora}"
+
+if ! mount | grep -q " $MP "; then
+	echo "lwext4fs-umount: $MP is not mounted"
+	exit 0
+fi
+
+if umount "$MP" 2>/dev/null; then
+	echo "lwext4fs-umount: unmounted $MP"
+	exit 0
+fi
+
+echo "lwext4fs-umount: $MP is busy (Spotlight?), forcing..."
+if umount -f "$MP"; then
+	echo "lwext4fs-umount: force-unmounted $MP"
+	exit 0
+fi
+
+echo "lwext4fs-umount: failed to unmount $MP" >&2
+exit 1

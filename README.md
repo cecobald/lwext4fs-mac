@@ -93,7 +93,7 @@ lwext4fs: mounted READ-ONLY (pass -o rw to enable writes)
 lwext4fs: mounted READ-WRITE (-o rw)
 ```
 
-Unmount with `umount <mountpoint>` (or `diskutil unmount <mountpoint>`).
+Unmount with **`sudo lwext4fs-umount <mountpoint>`** (installed by `make install`; retries with a forced unmount because Spotlight/`mds` frequently holds real-device macFUSE mounts busy), or plainly `umount <mountpoint>`.
 
 ## Image / volume format note
 
