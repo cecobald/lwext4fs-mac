@@ -1,3 +1,65 @@
+diff --git a/blockdev/linux/file_dev.c b/blockdev/linux/file_dev.c
+index dd0743b..726ce93 100644
+--- a/blockdev/linux/file_dev.c
++++ b/blockdev/linux/file_dev.c
+@@ -35,6 +35,13 @@
+ #include <stdio.h>
+ #include <stdbool.h>
+ #include <string.h>
++#include <unistd.h>
++#include <sys/ioctl.h>
++#if defined(__APPLE__)
++#include <sys/disk.h>   /* DKIOCGETBLOCKCOUNT / DKIOCGETBLOCKSIZE */
++#elif defined(__linux__)
++#include <linux/fs.h>   /* BLKGETSIZE64 */
++#endif
+ 
+ /**@brief   Default filename.*/
+ static const char *fname = "ext2";
+@@ -70,11 +77,39 @@ static int file_dev_open(struct ext4_blockdev *bdev)
+ 	/*No buffering at file.*/
+ 	setbuf(dev_file, 0);
+ 
+-	if (fseeko(dev_file, 0, SEEK_END))
+-		return EFAULT;
+-
+ 	file_dev.part_offset = 0;
+-	file_dev.part_size = ftello(dev_file);
++	file_dev.part_size = 0;
++
++	/* Regular file: size == seek-end position. */
++	if (!fseeko(dev_file, 0, SEEK_END))
++		file_dev.part_size = (uint64_t)ftello(dev_file);
++
++	/*
++	 * Block/character device (e.g. /dev/diskXsY on macOS): fseek(SEEK_END)
++	 * yields 0 because the node has no size, so ask the driver for the media
++	 * geometry instead. Without this, lwext4 sees a 0-block device and mount
++	 * fails with EINVAL.
++	 */
++	if (file_dev.part_size == 0) {
++#if defined(__APPLE__)
++		uint64_t bc = 0;
++		uint32_t bs = 0;
++		int fd = fileno(dev_file);
++		if (fd >= 0 &&
++		    ioctl(fd, DKIOCGETBLOCKCOUNT, &bc) == 0 &&
++		    ioctl(fd, DKIOCGETBLOCKSIZE, &bs) == 0 && bs)
++			file_dev.part_size = bc * (uint64_t)bs;
++#elif defined(__linux__)
++		uint64_t sz = 0;
++		int fd = fileno(dev_file);
++		if (fd >= 0 && ioctl(fd, BLKGETSIZE64, &sz) == 0)
++			file_dev.part_size = sz;
++#endif
++	}
++
++	if (file_dev.part_size == 0)
++		return EIO;
++
+ 	file_dev.bdif->ph_bcnt = file_dev.part_size / file_dev.bdif->ph_bsize;
+ 
+ 	return EOK;
 diff --git a/include/ext4_types.h b/include/ext4_types.h
 index c9cdd34..5972910 100644
 --- a/include/ext4_types.h

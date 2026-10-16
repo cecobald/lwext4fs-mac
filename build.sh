@@ -31,7 +31,11 @@ if [ ! -d "$VENDOR/.git" ]; then
 	git clone "$LWEXT4_REPO" "$VENDOR"
 fi
 git -C "$VENDOR" fetch --quiet origin "$LWEXT4_COMMIT" 2>/dev/null || true
-git -C "$VENDOR" checkout --quiet "$LWEXT4_COMMIT"
+# reset hard so leftover modifications from a previous run can't make
+# `git apply` fail (all-or-nothing) and silently skip every patch.
+git -C "$VENDOR" checkout --quiet --force "$LWEXT4_COMMIT"
+git -C "$VENDOR" reset --hard --quiet "$LWEXT4_COMMIT"
+git -C "$VENDOR" clean -fdq
 
 echo "==> applying patches"
 shopt -s nullglob
