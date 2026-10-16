@@ -68,7 +68,7 @@ make LWEXT4=/path/to/lwext4
 ## Install
 
 ```sh
-sudo make install          # installs /usr/local/bin/lwext4fs-mac
+sudo make install          # installs lwext4fs-mac + the mount/umount helpers
 # uninstall:
 sudo make uninstall
 ```
@@ -76,6 +76,12 @@ sudo make uninstall
 ## Usage
 
 ```sh
+# recommended — safe wrapper, read-only by default:
+sudo lwext4fs-mount /dev/disk0s3 /Volumes/Linux
+# ...with writes enabled:
+sudo lwext4fs-mount /dev/disk0s3 /Volumes/Linux --rw
+
+# or call the binary directly:
 lwext4fs-mac <device|image> <mountpoint> [fuse options...]
 
 # read-only (default):

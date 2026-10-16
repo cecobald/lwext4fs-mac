@@ -40,6 +40,7 @@ $(BIN): $(OBJS)
 install: $(BIN)
 	install -d "$(DESTDIR)$(PREFIX)/bin"
 	install -m 0755 $(BIN) "$(DESTDIR)$(PREFIX)/bin/$(BIN)"
+	install -m 0755 scripts/lwext4fs-mount "$(DESTDIR)$(PREFIX)/bin/lwext4fs-mount"
 	install -m 0755 scripts/lwext4fs-umount "$(DESTDIR)$(PREFIX)/bin/lwext4fs-umount"
 
 uninstall:

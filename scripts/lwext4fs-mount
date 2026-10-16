@@ -1,0 +1,80 @@
+#!/bin/bash
+# lwext4fs-mount — safe mount helper for lwext4fs-mac.
+#
+# Mounts READ-ONLY by default. Pass -w / --rw to allow writes.
+#
+# Rationale: lwext4fs-mac is a prototype; a read-only mount is always safe,
+# while writing to an ext4 volume with a non-kernel driver should be a
+# deliberate choice (and only when the owning OS is fully shut down).
+#
+# Usage:
+#   sudo lwext4fs-mount <device|image> [mountpoint] [--rw]
+#
+# Default mountpoint: /Volumes/Fedora
+# The binary is taken from $PATH (or from $LWEXT4FS_BIN).
+set -u
+
+BIN="${LWEXT4FS_BIN:-lwext4fs-mac}"
+RW=0
+POS=()
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-w|--rw) RW=1; shift ;;
+		-h|--help)
+			printf 'usage: lwext4fs-mount <device|image> [mountpoint] [--rw]\n'
+			printf '  default: read-only  ·  --rw enables writes\n'
+			exit 0 ;;
+		*) POS[${#POS[@]}]="$1"; shift ;;
+	esac
+done
+
+DEV="${POS[0]:-}"
+MP="${POS[1]:-/Volumes/Fedora}"
+
+if [ -z "$DEV" ]; then
+	echo "usage: lwext4fs-mount <device|image> [mountpoint] [--rw]" >&2
+	exit 2
+fi
+
+# Locate the binary.
+if ! command -v "$BIN" >/dev/null 2>&1; then
+	here="$(cd "$(dirname "$0")" && pwd)"
+	for c in "$here/lwext4fs-mac" "$here/../lwext4fs-mac"; do
+		[ -x "$c" ] && { BIN="$c"; break; }
+	done
+fi
+if [ ! -x "$BIN" ]; then
+	echo "lwext4fs-mount: cannot find lwext4fs-mac (set LWEXT4FS_BIN)" >&2
+	exit 1
+fi
+
+if [ ! -e "$DEV" ]; then
+	echo "lwext4fs-mount: no such device or image: $DEV" >&2
+	exit 1
+fi
+
+if mount | grep -q " $MP "; then
+	echo "lwext4fs-mount: $MP is already mounted" >&2
+	exit 1
+fi
+
+mkdir -p "$MP" 2>/dev/null || true
+
+if [ "$RW" -eq 1 ]; then
+	MODE="READ-WRITE"
+	echo "lwext4fs-mount: mounting $DEV -> $MP  [READ-WRITE]"
+	"$BIN" "$DEV" "$MP" -o rw -o allow_other
+else
+	MODE="READ-ONLY"
+	echo "lwext4fs-mount: mounting $DEV -> $MP  [READ-ONLY] (use --rw to allow writes)"
+	"$BIN" "$DEV" "$MP" -o allow_other
+fi
+
+sleep 1
+if mount | grep -q " $MP "; then
+	echo "lwext4fs-mount: mounted $MP [$MODE]"
+else
+	echo "lwext4fs-mount: mount failed" >&2
+	exit 1
+fi
