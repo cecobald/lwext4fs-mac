@@ -1,0 +1,32 @@
+diff --git a/include/ext4_types.h b/include/ext4_types.h
+index c9cdd34..5972910 100644
+--- a/include/ext4_types.h
++++ b/include/ext4_types.h
+@@ -296,7 +296,7 @@ struct ext4_sblock {
+  * MMP - multi-mout protection (impossible scenario)
+  * */
+ #define EXT_FINCOM_IGNORED                                 \
+-	EXT4_FINCOM_RECOVER | EXT4_FINCOM_MMP
++	EXT4_FINCOM_RECOVER | EXT4_FINCOM_MMP | EXT4_FINCOM_BG_USE_META_CSUM
+ 
+ #if 0
+ /*TODO: Features incompatible to implement*/
+diff --git a/src/ext4_xattr.c b/src/ext4_xattr.c
+index f8a5778..ccb8f9d 100644
+--- a/src/ext4_xattr.c
++++ b/src/ext4_xattr.c
+@@ -1261,7 +1261,13 @@ int ext4_xattr_remove(struct ext4_inode_ref *inode_ref, uint8_t name_index,
+ 
+ 	} else {
+ 		/* Now remove the entry */
+-		ext4_xattr_set_entry(&i, &block_finder.s, false);
++		/*
++		 * FIX(2026-10-16): the entry lives in the inode body, so the ibody
++		 * search context must be used here. Using block_finder.s (never
++		 * initialised on this path) made ext4_xattr_remove() a silent
++		 * no-op for in-inode attributes. Matches upstream lwext4.
++		 */
++		ext4_xattr_set_entry(&i, &ibody_finder.s, false);
+ 		inode_ref->dirty = true;
+ 	}
+ out:

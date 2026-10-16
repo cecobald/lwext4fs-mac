@@ -1,0 +1,12 @@
+# binaries / build artifacts
+*.o
+lwext4fs-mac
+# test disk images (big)
+*.ext4
+*.img
+# mount points
+mnt*/
+vmnt/
+p3mnt/
+# macOS
+.DS_Store
